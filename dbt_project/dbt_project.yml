@@ -1,0 +1,39 @@
+name: 'bank_marketing_analytics'
+version: '1.0.0'
+config-version: 2
+profile: 'bank_marketing'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  bank_marketing_analytics:
+    +materialized: table
+    staging:
+      +schema: staging
+    marts:
+      +schema: marts
+
+# Variables del proyecto
+vars:
+  # Configuración de fechas para filtrado incremental
+  start_date: '2008-05-01'
+  end_date: '2010-11-30'
+
+  # Umbrales de negocio para validaciones
+  min_age: 18
+  max_age: 100
+  min_balance: -10000
+  max_balance: 100000
+
+  # Configuración de KPIs
+  success_threshold: 0.10

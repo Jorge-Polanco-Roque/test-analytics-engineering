@@ -1,0 +1,363 @@
+name: DBT CI/CD Pipeline
+
+# Pipeline CI/CD para DBT
+# Ejecuta en PRs (tests) y en merge a main (deploy a prod)
+
+on:
+  # Ejecutar en pull requests
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+    paths:
+      - 'dbt_project/**'
+      - '.github/workflows/**'
+
+  # Ejecutar en push a main (despliegue a producción)
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'dbt_project/**'
+
+  # Permitir ejecución manual
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+  # Ejecución programada (opcional - desactivado por defecto)
+  # schedule:
+  #   - cron: '0 6 * * *'  # Diario a las 6 AM UTC
+
+# Variables de entorno globales
+env:
+  DBT_PROFILES_DIR: ${{ github.workspace }}/dbt_project
+  PYTHON_VERSION: '3.11'
+  DBT_VERSION: '1.7.0'
+
+# Permisos necesarios
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  # ==========================================================================
+  # JOB 1: VALIDACIÓN DE CÓDIGO
+  # ==========================================================================
+  validate:
+    name: Validate Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install sqlfluff==2.3.5
+          pip install dbt-core==${{ env.DBT_VERSION }}
+          pip install dbt-bigquery==${{ env.DBT_VERSION }}
+
+      - name: 🔍 Lint SQL with SQLFluff
+        run: |
+          cd dbt_project
+          sqlfluff lint models/ \
+            --dialect bigquery \
+            --exclude-rules L034,L036 \
+            --format github-annotation
+        continue-on-error: true
+
+      - name: ✅ Parse DBT project
+        run: |
+          cd dbt_project
+          dbt parse --profiles-dir .
+        env:
+          DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT }}
+
+      - name: 📝 Check for compilation errors
+        run: |
+          cd dbt_project
+          dbt compile --profiles-dir .
+        env:
+          DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT }}
+
+  # ==========================================================================
+  # JOB 2: EJECUTAR TESTS EN STAGING
+  # ==========================================================================
+  test:
+    name: Run DBT Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install DBT and dependencies
+        run: |
+          pip install --upgrade pip
+          pip install dbt-core==${{ env.DBT_VERSION }}
+          pip install dbt-bigquery==${{ env.DBT_VERSION }}
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: ☁️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 📚 Install DBT packages
+        run: |
+          cd dbt_project
+          dbt deps --profiles-dir .
+
+      - name: 🏗️ Run DBT models (staging)
+        run: |
+          cd dbt_project
+          dbt run \
+            --profiles-dir . \
+            --target staging \
+            --full-refresh
+        env:
+          DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
+          DBT_SERVICE_ACCOUNT_KEY_PATH: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: 🧪 Run DBT tests
+        run: |
+          cd dbt_project
+          dbt test \
+            --profiles-dir . \
+            --target staging \
+            --store-failures
+        env:
+          DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
+          DBT_SERVICE_ACCOUNT_KEY_PATH: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: 📊 Generate test results summary
+        if: always()
+        run: |
+          cd dbt_project
+          dbt test --target staging || true
+          echo "## DBT Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "Tests completed. Check logs for details." >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # JOB 3: DESPLIEGUE A PRODUCCIÓN
+  # ==========================================================================
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    environment:
+      name: production
+      url: https://console.cloud.google.com/bigquery
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install DBT and dependencies
+        run: |
+          pip install --upgrade pip
+          pip install dbt-core==${{ env.DBT_VERSION }}
+          pip install dbt-bigquery==${{ env.DBT_VERSION }}
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: ☁️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: 📚 Install DBT packages
+        run: |
+          cd dbt_project
+          dbt deps --profiles-dir .
+
+      - name: 🔍 Check source freshness
+        run: |
+          cd dbt_project
+          dbt source freshness \
+            --profiles-dir . \
+            --target prod
+        env:
+          DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+        continue-on-error: true
+
+      - name: 🏗️ Run DBT models (production)
+        run: |
+          cd dbt_project
+          dbt run \
+            --profiles-dir . \
+            --target prod \
+            --full-refresh
+        env:
+          DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+
+      - name: 🧪 Run DBT tests (production)
+        run: |
+          cd dbt_project
+          dbt test \
+            --profiles-dir . \
+            --target prod \
+            --store-failures
+        env:
+          DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+
+      - name: 📖 Generate documentation
+        run: |
+          cd dbt_project
+          dbt docs generate \
+            --profiles-dir . \
+            --target prod
+        env:
+          DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+
+      - name: 📤 Upload documentation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: dbt_project/target/
+          retention-days: 30
+
+      - name: ✅ Deployment summary
+        run: |
+          echo "## 🚀 Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # JOB 4: AUDITORÍA DE CALIDAD DE DATOS
+  # ==========================================================================
+  data-quality-audit:
+    name: Data Quality Audit
+    runs-on: ubuntu-latest
+    needs: deploy-prod
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 📦 Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install dbt-core==${{ env.DBT_VERSION }}
+          pip install dbt-bigquery==${{ env.DBT_VERSION }}
+          pip install pandas
+          pip install google-cloud-bigquery
+
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: 🔍 Run data quality checks
+        run: |
+          cd dbt_project
+
+          echo "Running comprehensive data quality audit..."
+
+          # Ejecutar tests con store-failures
+          dbt test --profiles-dir . --target prod --store-failures || true
+
+          # Generar reporte de calidad
+          echo "## 📊 Data Quality Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All data quality tests have been executed." >> $GITHUB_STEP_SUMMARY
+          echo "Check test_results schema in BigQuery for failed records." >> $GITHUB_STEP_SUMMARY
+        env:
+          DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+
+  # ==========================================================================
+  # JOB 5: NOTIFICACIONES (OPCIONAL)
+  # ==========================================================================
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy-prod, data-quality-audit]
+    if: always() && (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+
+    steps:
+      - name: 📧 Notify on Success
+        if: needs.deploy-prod.result == 'success' && needs.data-quality-audit.result == 'success'
+        run: |
+          echo "✅ Pipeline completed successfully!"
+          # Aquí puedes agregar notificaciones a Slack, Email, etc.
+          # Ejemplo con Slack:
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"DBT deployment successful!"}' \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: ⚠️ Notify on Failure
+        if: needs.deploy-prod.result == 'failure' || needs.data-quality-audit.result == 'failure'
+        run: |
+          echo "❌ Pipeline failed!"
+          # Enviar notificación de fallo
+
+# ============================================================================
+# CONFIGURACIÓN DE SECRETS REQUERIDOS EN GITHUB
+# ============================================================================
+#
+# Navega a: Settings → Secrets and variables → Actions → New repository secret
+#
+# Secrets requeridos:
+#
+# 1. GCP_SERVICE_ACCOUNT_KEY
+#    - JSON key de la service account de GCP
+#    - Debe tener permisos de BigQuery Data Editor y Job User
+#
+# 2. DBT_GCP_PROJECT_STAGING
+#    - ID del proyecto GCP para staging
+#    - Ejemplo: "my-company-data-staging"
+#
+# 3. DBT_GCP_PROJECT_PROD
+#    - ID del proyecto GCP para producción
+#    - Ejemplo: "my-company-data-prod"
+#
+# 4. SLACK_WEBHOOK_URL (opcional)
+#    - URL del webhook de Slack para notificaciones
+#
+# ============================================================================

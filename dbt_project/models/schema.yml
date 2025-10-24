@@ -1,0 +1,85 @@
+version: 2
+
+models:
+  - name: staging_bank_marketing
+    description: |
+      Staging layer for Bank Marketing campaign data.
+      Transforms raw data into clean, typed, analysis-ready format.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - row_id
+          config:
+            severity: error
+
+    columns:
+      - name: row_id
+        description: Unique identifier for each contact record
+        tests:
+          - not_null:
+              config:
+                severity: error
+          - unique:
+              config:
+                severity: error
+
+      - name: age
+        description: Customer age in years (validated 18-100)
+        tests:
+          - not_null:
+              config:
+                severity: error
+          - dbt_utils.accepted_range:
+              min_value: 18
+              max_value: 100
+
+      - name: contact_month
+        description: Month of last contact
+        tests:
+          - not_null:
+              config:
+                severity: error
+          - accepted_values:
+              values: ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+
+      - name: subscribed
+        description: TARGET - Did client subscribe to term deposit?
+        tests:
+          - not_null:
+              config:
+                severity: error
+
+  - name: kpi_bank_marketing
+    description: |
+      KPI and Analytics table for Bank Marketing campaigns.
+      Provides aggregated metrics for campaign effectiveness analysis.
+
+    columns:
+      - name: kpi_row_id
+        description: Unique row identifier
+        tests:
+          - unique
+          - not_null
+
+      - name: conversion_rate_pct
+        description: PRIMARY KPI - Conversion rate percentage
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              inclusive: true
+
+      - name: total_contacts
+        description: Total number of contacts
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: successful_contacts
+        description: Number of successful contacts
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0

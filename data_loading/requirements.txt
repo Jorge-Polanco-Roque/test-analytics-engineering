@@ -1,0 +1,18 @@
+# ============================================================================
+# Python Dependencies - Data Loading Scripts
+# ============================================================================
+
+# UCI ML Repository client
+ucimlrepo==0.0.7
+
+# Data manipulation
+pandas>=1.5.0,<3.0.0
+numpy>=1.21.0,<2.0.0
+pyarrow>=3.0.0  # Required for BigQuery data loading
+
+# Google Cloud Platform
+google-cloud-bigquery>=3.10.0,<4.0.0
+google-auth>=2.16.0,<3.0.0
+
+# Additional utilities
+python-dotenv>=1.0.0  # Para cargar variables de entorno desde .env

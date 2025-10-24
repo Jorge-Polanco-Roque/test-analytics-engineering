@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  dbt:
+    build: .
+    container_name: bank-marketing-dbt
+    volumes:
+      - .:/app
+      - ~/.dbt:/root/.dbt
+      - ~/.config/gcloud:/root/.config/gcloud
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    working_dir: /app
+    stdin_open: true
+    tty: true

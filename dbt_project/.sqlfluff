@@ -1,0 +1,175 @@
+# ============================================================================
+# SQLFLUFF CONFIGURATION - SQL Linting Rules
+# ============================================================================
+# SQLFluff is a SQL linter and auto-formatter for maintaining code quality.
+# Documentation: https://docs.sqlfluff.com
+# ============================================================================
+
+[sqlfluff]
+
+# ============================================================================
+# CORE CONFIGURATION
+# ============================================================================
+
+# SQL dialect (BigQuery in our case)
+dialect = bigquery
+
+# Templater for DBT (parses Jinja)
+templater = dbt
+
+# Exclude directories
+exclude_rules = None
+
+# ============================================================================
+# TEMPLATER CONFIGURATION
+# ============================================================================
+
+[sqlfluff:templater:dbt]
+project_dir = ./
+profiles_dir = ./
+profile = bank_marketing
+target = dev
+
+# ============================================================================
+# INDENTATION & FORMATTING
+# ============================================================================
+
+[sqlfluff:indentation]
+# Indentation with spaces (not tabs)
+indent_unit = space
+tab_space_size = 4
+
+# Template blocks (Jinja) indentation
+template_blocks_indent = True
+
+# ============================================================================
+# LAYOUT RULES
+# ============================================================================
+
+[sqlfluff:layout:type:comma]
+# Leading commas (at the beginning of the line)
+line_position = leading
+spacing_before = touch
+spacing_after = touch
+
+[sqlfluff:layout:type:binary_operator]
+# Operators on separate lines
+line_position = leading
+spacing_before = touch
+spacing_after = touch
+
+# ============================================================================
+# RULES CONFIGURATION
+# ============================================================================
+
+[sqlfluff:rules]
+
+# Maximum line length
+max_line_length = 100
+
+# Capitalization
+# L010: Keywords should be uppercase
+# L014: Unquoted identifiers should be lowercase
+# L030: Function names should be uppercase
+capitalisation_policy_functions = upper
+capitalisation_policy_keywords = upper
+capitalisation_policy_literals = upper
+capitalisation_policy_types = upper
+
+# Aliasing
+# L011: Implicit aliasing is not allowed
+# L012: Implicit column aliasing is not allowed
+aliasing = explicit
+
+# ============================================================================
+# RULES TO IGNORE (CUSTOMIZATION)
+# ============================================================================
+
+[sqlfluff:rules:L003]
+# Indentation not consistent with previous lines
+# Sometimes conflicts with Jinja, so we relax it
+lint_templated_tokens = False
+
+[sqlfluff:rules:L016]
+# Line is too long
+# We allow some flexibility for readability
+max_line_length = 120
+
+[sqlfluff:rules:L034]
+# Select wildcards then simple targets before calculations and aggregates
+# Disabled because we prefer logical grouping over this rule
+select_clause_trailing_comma = forbid
+
+[sqlfluff:rules:L036]
+# Select targets should be on a new line unless there is only one select target
+# Disabled for flexibility in simple selects
+wildcard_policy = single
+
+[sqlfluff:rules:L047]
+# Use COUNT(*) instead of COUNT(0)
+# Prefer COUNT(*) for better readability
+prefer_count_1 = False
+prefer_count_0 = False
+
+[sqlfluff:rules:L052]
+# Require columns in semi-join
+# Disabled for subqueries
+semi_anti_join_with_external_reference = False
+
+[sqlfluff:rules:L063]
+# Data types should be consistent
+# Allow flexibility in type casting
+extended_capitalisation_policy = consistent
+
+# ============================================================================
+# DOCUMENTATION
+# ============================================================================
+#
+# Common SQLFluff Rules:
+#
+# L001: Unnecessary trailing whitespace
+# L002: Mixed Tabs and Spaces in file
+# L003: Indentation not consistent with previous lines
+# L004: Indentation should be 4 spaces
+# L005: Commas should not have whitespace directly before them
+# L006: Operators should be surrounded by a single space unless at start/end of line
+# L007: Operators near newlines should be after, not before the newline
+# L008: Commas should be followed by a single whitespace
+# L009: Files must end with a single trailing newline
+# L010: Keywords must be consistently upper case
+# L011: Implicit aliasing of tables is not allowed
+# L012: Implicit aliasing of columns is not allowed
+# L013: Column expression without alias
+# L014: Unquoted identifiers must be consistently lower case
+# L015: DISTINCT used with parentheses
+# L016: Line is too long
+# L019: Leading/Trailing comma enforcement
+# L022: Blank line expected but not found after CTE closing bracket
+# L023: Single whitespace expected after AS in WITH clause
+# L026: References cannot reference objects not present in FROM clause
+# L027: Qualified or unqualified column references in select target
+# L028: References should be consistent in statements with a single table
+# L029: Keywords should not be used as identifiers
+# L030: Function names should be consistently upper case
+# L031: Avoid using aliases in join condition
+# L034: Select wildcards then simple targets before calculations
+# L036: Select targets should be on a new line unless single target
+# L039: Unnecessary whitespace found
+# L040: Null & Boolean Literals should not be quoted
+# L042: Join/From clauses should not contain subqueries
+# L044: Query produces an unknown number of result columns
+# L045: Query defines a CTE but does not use it
+# L046: Jinja tags should have a single whitespace on either side
+# L047: Use COUNT(*) instead of COUNT(0) or COUNT(1)
+# L048: Quoted literals should be surrounded by a single whitespace
+# L049: PARTITION BY used with ORDER BY but not in window function
+# L051: INNER JOIN must be fully qualified
+# L052: Statements should not use HAVING without GROUP BY
+# L054: Inconsistent column references in GROUP BY/ORDER BY clauses
+#
+# Run SQLFluff:
+#   sqlfluff lint models/
+#   sqlfluff fix models/
+#   sqlfluff lint models/ --format github-annotation
+#
+# ============================================================================

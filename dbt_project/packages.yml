@@ -1,0 +1,22 @@
+# ============================================================================
+# DBT PACKAGES CONFIGURATION
+# ============================================================================
+# Define external dbt packages to install.
+# Install with: dbt deps
+# ============================================================================
+
+packages:
+  # dbt_utils: Collection of useful macros and tests
+  # https://github.com/dbt-labs/dbt-utils
+  - package: dbt-labs/dbt_utils
+    version: 1.1.1
+
+  # dbt_expectations: Great Expectations-style tests for dbt (usar metaplane en lugar de calogica)
+  # https://github.com/calogica/dbt-expectations
+  - package: metaplane/dbt_expectations
+    version: 0.10.1
+
+  # dbt_project_evaluator: Best practices checker (usar versión compatible con dbt 1.5.0)
+  # https://github.com/dbt-labs/dbt-project-evaluator
+  - package: dbt-labs/dbt_project_evaluator
+    version: 0.6.2

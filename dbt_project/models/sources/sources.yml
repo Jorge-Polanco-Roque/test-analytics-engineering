@@ -1,0 +1,215 @@
+# ============================================================================
+# DBT SOURCES CONFIGURATION - Raw Data Layer
+# ============================================================================
+# Define las fuentes de datos raw que alimentan nuestros modelos.
+# Los sources permiten:
+#   - Documentar el esquema de datos de entrada
+#   - Ejecutar tests de freshness (frescura de datos)
+#   - Referenciar tablas raw con {{ source() }} en lugar de hardcodear nombres
+#   - Generar lineage (linaje de datos) automático
+# ============================================================================
+
+version: 2
+
+sources:
+  # ---------------------------------------------------------------------------
+  # SOURCE: Bank Marketing Raw Data
+  # ---------------------------------------------------------------------------
+  # Descripción: Datos crudos de campañas de marketing telefónico
+  # Origen: UCI Machine Learning Repository (ID: 222)
+  # Frecuencia de actualización: Batch diario (en un escenario real)
+  # Owner: Data Engineering Team
+  # ---------------------------------------------------------------------------
+  - name: raw_bank_marketing
+    description: |
+      Datos crudos de campañas de marketing directo (llamadas telefónicas)
+      de una institución bancaria portuguesa.
+
+      Dataset original: UCI ML Repository - Bank Marketing
+      Período: Mayo 2008 - Noviembre 2010
+      Registros: ~45,000 contactos con clientes
+
+      El objetivo de negocio es predecir si un cliente suscribirá un
+      depósito a plazo basándose en características demográficas y
+      comportamiento en campañas previas.
+
+    # Configuración de BigQuery
+    database: "bank-marketing-analytics-001"  # Proyecto GCP
+    schema: "bank_marketing_dev"     # Dataset de raw data
+
+    # Configuración de freshness (frescura de datos)
+    # Alerta si los datos tienen más de 1 día de antigüedad
+    freshness:
+      warn_after: {count: 24, period: hour}
+      error_after: {count: 48, period: hour}
+
+    # Configuración de carga (loaded_at_field)
+    # Campo que indica cuándo se cargaron los datos
+    loaded_at_field: _dbt_loaded_at
+
+    # Tablas del source
+    tables:
+      # -----------------------------------------------------------------------
+      # TABLE: raw_bank_marketing
+      # -----------------------------------------------------------------------
+      - name: raw_bank_marketing
+        description: |
+          Tabla principal con todos los contactos de campaña.
+          Cada registro representa un contacto realizado a un cliente.
+
+          Nota: Esta tabla contiene datos SIN limpiar. Los valores nulos,
+          inconsistencias y outliers se manejan en la capa staging.
+
+        # Identificador de freshness
+        identifier: raw_bank_marketing
+
+        # -----------------------------------------------------------------------
+        # COLUMNS - Documentación de columnas
+        # -----------------------------------------------------------------------
+        columns:
+          # === DATOS DEMOGRÁFICOS DEL CLIENTE ===
+          - name: age
+            description: Edad del cliente en años
+            data_type: integer
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_be_between:
+                  min_value: 18
+                  max_value: 100
+
+          - name: job
+            description: |
+              Tipo de ocupación del cliente.
+              Valores: admin, unknown, unemployed, management, housemaid,
+                      entrepreneur, student, blue-collar, self-employed,
+                      retired, technician, services
+            data_type: string
+
+          - name: marital
+            description: |
+              Estado civil del cliente.
+              Valores: married, divorced, single
+              Nota: divorced incluye viudos
+            data_type: string
+
+          - name: education
+            description: |
+              Nivel educativo del cliente.
+              Valores: unknown, secondary, primary, tertiary
+            data_type: string
+
+          - name: default
+            description: |
+              ¿Tiene crédito en default (impago)?
+              Valores: yes, no
+            data_type: string
+
+          - name: balance
+            description: |
+              Balance promedio anual de la cuenta en euros.
+              Puede ser negativo (sobregiro).
+            data_type: integer
+
+          - name: housing
+            description: |
+              ¿Tiene préstamo hipotecario?
+              Valores: yes, no
+            data_type: string
+
+          - name: loan
+            description: |
+              ¿Tiene préstamo personal?
+              Valores: yes, no
+            data_type: string
+
+          # === DATOS DEL ÚLTIMO CONTACTO (CAMPAÑA ACTUAL) ===
+          - name: contact
+            description: |
+              Tipo de comunicación del contacto.
+              Valores: unknown, telephone, cellular
+              Nota: Tiene valores nulos (~28% de registros)
+            data_type: string
+
+          - name: day_of_week
+            description: |
+              Día del mes del último contacto (1-31).
+              Nota: En versiones nuevas del dataset es day of week.
+            data_type: integer
+
+          - name: month
+            description: |
+              Mes del último contacto.
+              Valores: jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec
+            data_type: string
+
+          - name: duration
+            description: |
+              Duración del último contacto en segundos.
+
+              IMPORTANTE: Esta variable es altamente predictiva pero solo se
+              conoce DESPUÉS de la llamada. No debe usarse para predicción
+              en tiempo real, pero es útil para análisis post-campaña.
+            data_type: integer
+
+          # === DATOS DE LA CAMPAÑA ===
+          - name: campaign
+            description: |
+              Número de contactos realizados durante esta campaña para este cliente.
+              Incluye el último contacto.
+            data_type: integer
+            tests:
+              - not_null
+              - dbt_expectations.expect_column_values_to_be_between:
+                  min_value: 1
+                  max_value: 100  # Valor razonable máximo
+
+          - name: pdays
+            description: |
+              Número de días desde el último contacto de una campaña ANTERIOR.
+              Valor especial: -1 = cliente nunca fue contactado anteriormente
+
+              Nota: Alto porcentaje de -1 en el dataset
+            data_type: integer
+
+          - name: previous
+            description: |
+              Número de contactos realizados antes de esta campaña para este cliente.
+            data_type: integer
+            tests:
+              - not_null
+
+          - name: poutcome
+            description: |
+              Resultado de la campaña de marketing ANTERIOR.
+              Valores: unknown, other, failure, success
+
+              Nota: ~82% de registros son unknown (clientes sin campaña previa)
+            data_type: string
+
+          # === VARIABLE TARGET ===
+          - name: y
+            description: |
+              Variable objetivo (target).
+              ¿El cliente suscribió un depósito a plazo?
+
+              Valores: yes, no
+
+              Distribución aproximada:
+              - no: 88.3%
+              - yes: 11.7%
+
+              Nota: Dataset altamente desbalanceado
+            data_type: string
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['yes', 'no']
+
+# ============================================================================
+# TESTS DE SOURCE FRESHNESS
+# ============================================================================
+# Para ejecutar tests de frescura:
+#   dbt source freshness
+#
+# Esto valida que los datos en las tablas source no estén desactualizados.
+# ============================================================================

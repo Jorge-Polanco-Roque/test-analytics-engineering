@@ -1,0 +1,135 @@
+# ============================================================================
+# DBT PROJECT CONFIGURATION - Bank Marketing Analytics
+# ============================================================================
+# Este archivo define la configuración principal del proyecto DBT para el
+# análisis de campañas de marketing bancario.
+#
+# Autor: Analytics Engineering Team
+# Última actualización: 2025-10-23
+# ============================================================================
+
+name: 'bank_marketing_analytics'
+version: '1.0.0'
+config-version: 2
+
+# Directorio de perfiles (contiene credenciales de BigQuery)
+profile: 'bank_marketing'
+
+# Configuración de directorios del proyecto
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# Directorio de salida para artefactos compilados
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# ============================================================================
+# CONFIGURACIÓN DE MODELOS
+# ============================================================================
+models:
+  bank_marketing_analytics:
+
+    # -------------------------------------------------------------------------
+    # STAGING MODELS - Capa de limpieza y normalización
+    # -------------------------------------------------------------------------
+    # Propósito: Transformar datos raw en datos limpios y tipados
+    # Materialización: View (para mantener datos actualizados sin costo)
+    # Schema: staging
+    # -------------------------------------------------------------------------
+    staging:
+      +materialized: view
+      +schema: staging
+      +tags: ["staging", "daily"]
+      +docs:
+        node_color: "#8BC34A"  # Verde - capa de entrada
+
+    # -------------------------------------------------------------------------
+    # MARTS MODELS - Capa de KPIs y métricas de negocio
+    # -------------------------------------------------------------------------
+    # Propósito: Agregaciones y KPIs listos para consumo de BI
+    # Materialización: Table (para performance en queries analíticos)
+    # Schema: marts
+    # -------------------------------------------------------------------------
+    marts:
+      +materialized: table
+      +schema: marts
+      +tags: ["marts", "daily"]
+      +docs:
+        node_color: "#2196F3"  # Azul - capa de consumo
+
+# ============================================================================
+# CONFIGURACIÓN DE SEEDS
+# ============================================================================
+# Los seeds son archivos CSV con datos de referencia (ej: mapeos, catálogos)
+seeds:
+  bank_marketing_analytics:
+    +schema: seeds
+    +tags: ["reference_data"]
+
+# ============================================================================
+# CONFIGURACIÓN DE TESTS
+# ============================================================================
+# Configuración global de tests de calidad de datos
+tests:
+  +store_failures: true  # Guardar registros que fallan tests
+  +schema: test_results  # Schema para almacenar fallos
+
+# ============================================================================
+# CONFIGURACIÓN DE SNAPSHOTS
+# ============================================================================
+# Para tracking de cambios históricos (SCD Type 2)
+# snapshots:
+#   +target_schema: snapshots
+#   +strategy: timestamp
+#   +unique_key: id
+#   +updated_at: updated_at
+
+# ============================================================================
+# VARIABLES DEL PROYECTO
+# ============================================================================
+# Variables globales accesibles en todos los modelos con {{ var('nombre') }}
+vars:
+  # Configuración de fechas para filtrado incremental
+  start_date: '2008-05-01'
+  end_date: '2010-11-30'
+
+  # Umbrales de negocio para validaciones
+  min_age: 18
+  max_age: 100
+  min_balance: -10000
+  max_balance: 100000
+
+  # Configuración de KPIs
+  success_threshold: 0.10  # 10% tasa de conversión objetivo
+
+# ============================================================================
+# CONFIGURACIÓN DE DISPATCH (para paquetes)
+# ============================================================================
+# dispatch:
+#   - macro_namespace: dbt_utils
+#     search_order: ['bank_marketing_analytics', 'dbt_utils']
+
+# ============================================================================
+# CONFIGURACIÓN ON-RUN-START y ON-RUN-END
+# ============================================================================
+# Hooks que se ejecutan antes y después de cada run de DBT
+on-run-start:
+  - "{{ log('Starting DBT run for Bank Marketing Analytics...', info=True) }}"
+
+on-run-end:
+  - "{{ log('DBT run completed successfully!', info=True) }}"
+  - "{{ log('Models built: ' ~ results | length, info=True) }}"
+
+# ============================================================================
+# CONFIGURACIÓN DE QUERY COMMENTS
+# ============================================================================
+# Añade comentarios automáticos a queries para tracking
+# query-comment:
+#   comment: "dbt_run: {{ dbt_version }}, model: {{ node.name }}, run_at: {{ run_started_at }}"
+#   append: true
