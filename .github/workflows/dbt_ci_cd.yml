@@ -119,6 +119,17 @@ jobs:
         run: |
           echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/gcp-key.json
 
+      - name: 🔎 Verify profiles.yml was created
+        run: |
+          echo "Checking if profiles.yml exists..."
+          ls -la ~/.dbt/
+          echo "---"
+          echo "Content of profiles.yml:"
+          cat ~/.dbt/profiles.yml
+          echo "---"
+          echo "Verifying keyfile exists:"
+          ls -la /tmp/gcp-key.json
+
       - name: 🔍 Lint SQL with SQLFluff
         run: |
           cd dbt_project
