@@ -138,6 +138,11 @@ jobs:
             --format github-annotation
         continue-on-error: true
 
+      - name: 📚 Install DBT packages
+        run: |
+          cd dbt_project
+          dbt deps
+
       - name: ✅ Parse DBT project
         run: |
           cd dbt_project
