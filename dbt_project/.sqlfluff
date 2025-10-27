@@ -17,6 +17,9 @@ dialect = bigquery
 # Templater for DBT (parses Jinja)
 templater = dbt
 
+# Maximum line length (moved to root level in SQLFluff 3.0+)
+max_line_length = 100
+
 # Exclude directories
 exclude_rules = None
 
@@ -61,10 +64,6 @@ spacing_after = touch
 # ============================================================================
 # RULES CONFIGURATION
 # ============================================================================
-
-[sqlfluff]
-# Maximum line length (moved to root level in SQLFluff 3.0+)
-max_line_length = 100
 
 [sqlfluff:rules]
 
