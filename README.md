@@ -200,3 +200,8 @@ dbt docs serve             # Ver docs (localhost:8080)
 - [Paper original](https://www.sciencedirect.com/science/article/abs/pii/S0167923614000596): Moro, S., Cortez, P., & Rita, P. (2014)
 - [Dataset UCI](https://archive.ics.uci.edu/dataset/222/bank+marketing)
 - [DBT Docs](https://docs.getdbt.com)
+## ✅ CI/CD Configurado
+Pipeline automatizado con GitHub Actions para validación, tests y deploy.
+
+## ✅ CI/CD Configurado
+Pipeline automatizado con GitHub Actions para validación, tests y deploy.
