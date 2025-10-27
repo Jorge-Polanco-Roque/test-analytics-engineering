@@ -14,8 +14,9 @@
 # SQL dialect (BigQuery in our case)
 dialect = bigquery
 
-# Templater for DBT (parses Jinja)
-templater = dbt
+# Templater for DBT (using placeholder to avoid profile issues in CI/CD)
+# In local development you can change this to 'dbt' if needed
+templater = placeholder
 
 # Maximum line length (moved to root level in SQLFluff 3.0+)
 max_line_length = 100
