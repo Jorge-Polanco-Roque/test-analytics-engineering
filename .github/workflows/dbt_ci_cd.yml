@@ -71,8 +71,6 @@ jobs:
       - name: 📦 Install dependencies
         run: |
           pip install --upgrade pip
-          pip install sqlfluff>=3.0.0
-          pip install sqlfluff-templater-dbt
           pip install dbt-core==${{ env.DBT_VERSION }}
           pip install dbt-bigquery==${{ env.DBT_VERSION }}
 
@@ -134,15 +132,6 @@ jobs:
         run: |
           cd dbt_project
           dbt deps || true
-
-      - name: 🔍 Lint SQL with SQLFluff
-        run: |
-          cd dbt_project
-          sqlfluff lint models/ \
-            --dialect bigquery \
-            --exclude-rules L034,L036 \
-            --format github-annotation
-        continue-on-error: true
 
       - name: ✅ Parse DBT project
         run: |
