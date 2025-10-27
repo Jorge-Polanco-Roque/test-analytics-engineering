@@ -130,6 +130,11 @@ jobs:
           echo "Verifying keyfile exists:"
           ls -la /tmp/gcp-key.json
 
+      - name: 📚 Install DBT packages
+        run: |
+          cd dbt_project
+          dbt deps || true
+
       - name: 🔍 Lint SQL with SQLFluff
         run: |
           cd dbt_project
@@ -138,11 +143,6 @@ jobs:
             --exclude-rules L034,L036 \
             --format github-annotation
         continue-on-error: true
-
-      - name: 📚 Install DBT packages
-        run: |
-          cd dbt_project
-          dbt deps || true
 
       - name: ✅ Parse DBT project
         run: |
