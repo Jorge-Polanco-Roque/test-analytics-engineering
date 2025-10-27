@@ -129,9 +129,9 @@ Corre diariamente a las 7 AM UTC:
 
 ## Stack
 
-- **DBT**: 1.7.17 (transformaciones)
+- **DBT**: 1.7.9 (transformaciones)
 - **BigQuery**: Data warehouse
-- **Python**: 3.10 (carga de datos)
+- **Python**: 3.11 (carga de datos)
 - **GitHub Actions**: CI/CD
 - **SQLFluff**: Linting
 
@@ -145,7 +145,7 @@ cd bank-marketing-dbt
 # 2. Instalar
 python -m venv venv
 source venv/bin/activate
-pip install dbt-core==1.7.17 dbt-bigquery==1.7.9
+pip install dbt-core==1.7.9 dbt-bigquery==1.7.9
 
 # 3. Configurar GCP
 gcloud auth application-default login

@@ -149,7 +149,7 @@ python --version
 
 # Verificar versión de DBT
 dbt --version
-# Esperado: Core 1.7.17, bigquery 1.7.9
+# Esperado: Core 1.7.9, bigquery 1.7.9
 
 # Verificar que estamos en /app
 pwd
@@ -579,8 +579,8 @@ dbt test
 Después de ejecutar todo, deberías tener:
 
 - [ ] Contenedor Docker funcionando
-- [ ] Python 3.10.x instalado
-- [ ] DBT 1.7.17 instalado
+- [ ] Python 3.11.x instalado
+- [ ] DBT 1.7.9 instalado
 - [ ] `dbt debug` pasa con "All checks passed!"
 - [ ] 45,211 registros en `raw_bank_marketing`
 - [ ] 45,211 registros en `staging_bank_marketing` (view)
