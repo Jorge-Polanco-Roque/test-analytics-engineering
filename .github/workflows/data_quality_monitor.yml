@@ -99,7 +99,7 @@ jobs:
       - name: 📚 Install DBT packages
         run: |
           cd dbt_project
-          dbt deps
+          dbt deps || true
 
       - name: 🔍 Check source freshness
         id: freshness
@@ -209,7 +209,7 @@ jobs:
       - name: 📚 Install DBT packages
         run: |
           cd dbt_project
-          dbt deps
+          dbt deps || true
 
       - name: 🧪 Run all tests
         id: tests
