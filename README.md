@@ -89,7 +89,7 @@ Output: 32 columnas limpias → View en BigQuery
 
 Output: 47 columnas con KPIs → Tabla particionada en BigQuery
 
-## Tests (29 total)
+## Tests (27 total)
 
 - **not_null**: En campos críticos (age, subscribed, conversion_rate, etc.)
 - **unique**: IDs y combinaciones únicas
@@ -124,7 +124,7 @@ Todos los tests pasan ✓
 
 Corre diariamente a las 7 AM UTC:
 - Checa frescura de datos
-- Ejecuta los 29 tests
+- Ejecuta los 27 tests
 - Crea issue en GitHub si algo falla
 
 ## Stack
@@ -132,42 +132,57 @@ Corre diariamente a las 7 AM UTC:
 - **DBT**: 1.7.17 (transformaciones)
 - **BigQuery**: Data warehouse
 - **Python**: 3.10 (carga de datos)
+- **Docker**: Portabilidad y reproducibilidad
 - **GitHub Actions**: CI/CD
-- **SQLFluff**: Linting
 
-## Setup Rápido
+## Setup Rápido con Docker
 
 ```bash
 # 1. Clonar
-git clone <repo>
-cd bank-marketing-dbt
+git clone https://github.com/Jorge-Polanco-Roque/Bank-Marketing.git
+cd Bank-Marketing
 
-# 2. Instalar
-python -m venv venv
-source venv/bin/activate
-pip install dbt-core==1.7.17 dbt-bigquery==1.7.9
-
-# 3. Configurar GCP
+# 2. Configurar GCP
 gcloud auth application-default login
-gcloud config set project <tu-proyecto>
+gcloud config set project tu-proyecto-id
 
-# 4. Cargar datos
-cd data_loading
-pip install -r requirements.txt
+# 3. Configurar DBT profiles
+mkdir -p ~/.dbt
+cat > ~/.dbt/profiles.yml << EOF
+bank_marketing:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: tu-proyecto-id
+      dataset: bank_marketing_dev
+      location: US
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive
+EOF
+
+# 4. Construir y ejecutar con Docker
+docker-compose build
+docker-compose run --rm dbt bash
+
+# 5. Dentro del contenedor
+cd /app/data_loading
 python load_to_bigquery.py
 
-# 5. Ejecutar DBT
-cd ../dbt_project
-dbt deps
-dbt run
-dbt test
+cd /app/dbt_project
+dbt deps --profiles-dir ~/.dbt
+dbt run --profiles-dir ~/.dbt
+dbt test --profiles-dir ~/.dbt
 ```
 
-Ver [HOWTO.md](HOWTO.md) para instrucciones detalladas.
+Ver [HOWTO.md](HOWTO.md) para instrucciones detalladas con troubleshooting.
 
-## Comandos
+## Comandos Útiles
 
 ```bash
+# Dentro del contenedor
 dbt run                    # Ejecutar modelos
 dbt test                   # Ejecutar tests
 dbt build                  # run + test
@@ -176,6 +191,8 @@ dbt docs serve             # Ver docs (localhost:8080)
 ```
 
 ## Por Qué Estas Decisiones
+
+**Docker**: Reproducibilidad total. El proyecto funciona igual en cualquier máquina sin instalar Python ni dependencias.
 
 **CTEs en vez de subqueries**: Más fácil de leer y debuggear. Puedes comentar CTEs individuales para ver resultados intermedios.
 
@@ -200,3 +217,7 @@ dbt docs serve             # Ver docs (localhost:8080)
 - [Paper original](https://www.sciencedirect.com/science/article/abs/pii/S0167923614000596): Moro, S., Cortez, P., & Rita, P. (2014)
 - [Dataset UCI](https://archive.ics.uci.edu/dataset/222/bank+marketing)
 - [DBT Docs](https://docs.getdbt.com)
+- [BigQuery Docs](https://cloud.google.com/bigquery/docs)
+
+## ✅ CI/CD Configurado
+Pipeline automatizado con GitHub Actions para validación, tests y deploy.
