@@ -34,8 +34,8 @@ sources:
       comportamiento en campañas previas.
 
     # Configuración de BigQuery
-    database: "bank-marketing-analytics-001"  # Proyecto GCP
-    schema: "bank_marketing_dev"     # Dataset de raw data
+    database: "{{ target.project }}"  # Proyecto GCP (dinámico por ambiente)
+    schema: "bank_marketing_dev"      # Dataset de raw data
 
     # Configuración de freshness (frescura de datos)
     # Alerta si los datos tienen más de 1 día de antigüedad

@@ -22,6 +22,10 @@ SQLFLUFF := sqlfluff
 PROJECT_DIR := dbt_project
 DATA_LOADING_DIR := data_loading
 
+# GCP Configuration (override with environment variables or command line)
+PROJECT_ID ?= your-gcp-project-id
+DATASET ?= bank_marketing_dev
+
 # Default target
 .DEFAULT_GOAL := help
 
@@ -53,8 +57,8 @@ setup: ## Configuración inicial completa del proyecto
 install-deps: ## Instalar dependencias de Python
 	@echo "📦 Instalando dependencias de Python..."
 	@$(PIP) install --upgrade pip
-	@$(PIP) install dbt-core==1.7.0
-	@$(PIP) install dbt-bigquery==1.7.0
+	@$(PIP) install dbt-core==1.7.17
+	@$(PIP) install dbt-bigquery==1.7.17
 	@$(PIP) install sqlfluff==2.3.5
 	@cd $(DATA_LOADING_DIR) && $(PIP) install -r requirements.txt
 	@echo "✅ Dependencias instaladas"

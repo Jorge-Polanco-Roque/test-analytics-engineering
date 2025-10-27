@@ -43,7 +43,7 @@ on:
 env:
   DBT_PROFILES_DIR: ${{ github.workspace }}/dbt_project
   PYTHON_VERSION: '3.11'
-  DBT_VERSION: '1.7.0'
+  DBT_VERSION: '1.7.17'
 
 # Permisos necesarios
 permissions:
@@ -76,6 +76,49 @@ jobs:
           pip install dbt-core==${{ env.DBT_VERSION }}
           pip install dbt-bigquery==${{ env.DBT_VERSION }}
 
+      - name: 🔧 Create DBT profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          bank_marketing:
+            target: dev
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT }}
+                dataset: bank_marketing_dev
+                location: US
+                threads: 4
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              staging:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
+                dataset: bank_marketing_staging
+                location: US
+                threads: 2
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              prod:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+                dataset: bank_marketing_prod
+                location: US
+                threads: 1
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+          EOF
+
+      - name: 🔐 Create GCP credentials file
+        run: |
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/gcp-key.json
+
       - name: 🔍 Lint SQL with SQLFluff
         run: |
           cd dbt_project
@@ -88,14 +131,14 @@ jobs:
       - name: ✅ Parse DBT project
         run: |
           cd dbt_project
-          dbt parse --profiles-dir .
+          dbt parse
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT }}
 
       - name: 📝 Check for compilation errors
         run: |
           cd dbt_project
-          dbt compile --profiles-dir .
+          dbt compile
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT }}
 
@@ -124,40 +167,77 @@ jobs:
           pip install dbt-core==${{ env.DBT_VERSION }}
           pip install dbt-bigquery==${{ env.DBT_VERSION }}
 
-      - name: 🔐 Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+      - name: 🔧 Create DBT profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          bank_marketing:
+            target: dev
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT }}
+                dataset: bank_marketing_dev
+                location: US
+                threads: 4
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              staging:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
+                dataset: bank_marketing_staging
+                location: US
+                threads: 2
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              prod:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+                dataset: bank_marketing_prod
+                location: US
+                threads: 1
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+          EOF
+
+      - name: 🔐 Create GCP credentials file
+        run: |
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/gcp-key.json
 
       - name: ☁️ Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          project_id: ${{ secrets.DBT_GCP_PROJECT }}
 
       - name: 📚 Install DBT packages
         run: |
           cd dbt_project
-          dbt deps --profiles-dir .
+          dbt deps
 
       - name: 🏗️ Run DBT models (staging)
         run: |
           cd dbt_project
           dbt run \
-            --profiles-dir . \
             --target staging \
             --full-refresh
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
-          DBT_SERVICE_ACCOUNT_KEY_PATH: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
 
       - name: 🧪 Run DBT tests
         run: |
           cd dbt_project
           dbt test \
-            --profiles-dir . \
             --target staging \
             --store-failures
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
-          DBT_SERVICE_ACCOUNT_KEY_PATH: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
 
       - name: 📊 Generate test results summary
         if: always()
@@ -195,24 +275,64 @@ jobs:
           pip install dbt-core==${{ env.DBT_VERSION }}
           pip install dbt-bigquery==${{ env.DBT_VERSION }}
 
-      - name: 🔐 Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+      - name: 🔧 Create DBT profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          bank_marketing:
+            target: dev
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT }}
+                dataset: bank_marketing_dev
+                location: US
+                threads: 4
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              staging:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
+                dataset: bank_marketing_staging
+                location: US
+                threads: 2
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              prod:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+                dataset: bank_marketing_prod
+                location: US
+                threads: 1
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+          EOF
+
+      - name: 🔐 Create GCP credentials file
+        run: |
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/gcp-key.json
 
       - name: ☁️ Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          project_id: ${{ secrets.DBT_GCP_PROJECT }}
 
       - name: 📚 Install DBT packages
         run: |
           cd dbt_project
-          dbt deps --profiles-dir .
+          dbt deps
 
       - name: 🔍 Check source freshness
         run: |
           cd dbt_project
           dbt source freshness \
-            --profiles-dir . \
             --target prod
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_PROD }}
@@ -222,7 +342,6 @@ jobs:
         run: |
           cd dbt_project
           dbt run \
-            --profiles-dir . \
             --target prod \
             --full-refresh
         env:
@@ -232,7 +351,6 @@ jobs:
         run: |
           cd dbt_project
           dbt test \
-            --profiles-dir . \
             --target prod \
             --store-failures
         env:
@@ -242,7 +360,6 @@ jobs:
         run: |
           cd dbt_project
           dbt docs generate \
-            --profiles-dir . \
             --target prod
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_PROD }}
@@ -289,10 +406,54 @@ jobs:
           pip install pandas
           pip install google-cloud-bigquery
 
-      - name: 🔐 Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+      - name: 🔧 Create DBT profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          bank_marketing:
+            target: dev
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT }}
+                dataset: bank_marketing_dev
+                location: US
+                threads: 4
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              staging:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
+                dataset: bank_marketing_staging
+                location: US
+                threads: 2
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              prod:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+                dataset: bank_marketing_prod
+                location: US
+                threads: 1
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+          EOF
+
+      - name: 🔐 Create GCP credentials file
+        run: |
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/gcp-key.json
+
+      - name: ☁️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
         with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          project_id: ${{ secrets.DBT_GCP_PROJECT }}
 
       - name: 🔍 Run data quality checks
         run: |
@@ -301,7 +462,7 @@ jobs:
           echo "Running comprehensive data quality audit..."
 
           # Ejecutar tests con store-failures
-          dbt test --profiles-dir . --target prod --store-failures || true
+          dbt test --target prod --store-failures || true
 
           # Generar reporte de calidad
           echo "## 📊 Data Quality Report" >> $GITHUB_STEP_SUMMARY
@@ -349,15 +510,19 @@ jobs:
 #    - JSON key de la service account de GCP
 #    - Debe tener permisos de BigQuery Data Editor y Job User
 #
-# 2. DBT_GCP_PROJECT_STAGING
+# 2. DBT_GCP_PROJECT
+#    - ID del proyecto GCP para development/testing
+#    - Ejemplo: "my-company-data-dev"
+#
+# 3. DBT_GCP_PROJECT_STAGING
 #    - ID del proyecto GCP para staging
 #    - Ejemplo: "my-company-data-staging"
 #
-# 3. DBT_GCP_PROJECT_PROD
+# 4. DBT_GCP_PROJECT_PROD
 #    - ID del proyecto GCP para producción
 #    - Ejemplo: "my-company-data-prod"
 #
-# 4. SLACK_WEBHOOK_URL (opcional)
+# 5. SLACK_WEBHOOK_URL (opcional)
 #    - URL del webhook de Slack para notificaciones
 #
 # ============================================================================

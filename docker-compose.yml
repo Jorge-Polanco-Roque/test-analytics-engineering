@@ -13,3 +13,5 @@ services:
     working_dir: /app
     stdin_open: true
     tty: true
+    # IMPORTANTE: Asegúrate de ejecutar 'gcloud auth application-default login'
+    # en tu máquina host antes de iniciar el contenedor

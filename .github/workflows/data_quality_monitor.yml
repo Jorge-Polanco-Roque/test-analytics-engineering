@@ -25,7 +25,7 @@ on:
 env:
   DBT_PROFILES_DIR: ${{ github.workspace }}/dbt_project
   PYTHON_VERSION: '3.11'
-  DBT_VERSION: '1.7.0'
+  DBT_VERSION: '1.7.17'
 
 jobs:
   # ==========================================================================
@@ -54,16 +54,59 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
 
+      - name: 🔧 Create DBT profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          bank_marketing:
+            target: prod
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT }}
+                dataset: bank_marketing_dev
+                location: US
+                threads: 4
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              staging:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
+                dataset: bank_marketing_staging
+                location: US
+                threads: 2
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              prod:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+                dataset: bank_marketing_prod
+                location: US
+                threads: 1
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+          EOF
+
+      - name: 🔐 Create GCP credentials file
+        run: |
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/gcp-key.json
+
       - name: 📚 Install DBT packages
         run: |
           cd dbt_project
-          dbt deps --profiles-dir .
+          dbt deps
 
       - name: 🔍 Check source freshness
         id: freshness
         run: |
           cd dbt_project
-          dbt source freshness --profiles-dir . --target prod
+          dbt source freshness --target prod
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_PROD }}
         continue-on-error: true
@@ -121,16 +164,59 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
 
+      - name: 🔧 Create DBT profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          bank_marketing:
+            target: prod
+            outputs:
+              dev:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT }}
+                dataset: bank_marketing_dev
+                location: US
+                threads: 4
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              staging:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_STAGING }}
+                dataset: bank_marketing_staging
+                location: US
+                threads: 2
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+              prod:
+                type: bigquery
+                method: service-account
+                project: ${{ secrets.DBT_GCP_PROJECT_PROD }}
+                dataset: bank_marketing_prod
+                location: US
+                threads: 1
+                timeout_seconds: 300
+                priority: interactive
+                keyfile: /tmp/gcp-key.json
+          EOF
+
+      - name: 🔐 Create GCP credentials file
+        run: |
+          echo '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}' > /tmp/gcp-key.json
+
       - name: 📚 Install DBT packages
         run: |
           cd dbt_project
-          dbt deps --profiles-dir .
+          dbt deps
 
       - name: 🧪 Run all tests
         id: tests
         run: |
           cd dbt_project
-          dbt test --profiles-dir . --target prod --store-failures
+          dbt test --target prod --store-failures
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT_PROD }}
         continue-on-error: true
@@ -169,7 +255,7 @@ jobs:
 
               **Failed Records:**
               Failed test records are stored in BigQuery:
-              - Project: \`${process.env.DBT_GCP_PROJECT_PROD}\`
+              - Project: Check workflow environment variables
               - Dataset: \`test_results\`
 
               **Action Required:**
