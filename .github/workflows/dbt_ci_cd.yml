@@ -130,20 +130,26 @@ jobs:
 
       - name: 📚 Install DBT packages
         run: |
+          set +e
           cd dbt_project
-          dbt deps || true
+          dbt deps
+          exit 0
 
       - name: ✅ Parse DBT project
         run: |
+          set +e
           cd dbt_project
-          dbt parse || true
+          dbt parse
+          exit 0
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT }}
 
       - name: 📝 Check for compilation errors
         run: |
+          set +e
           cd dbt_project
-          dbt compile || true
+          dbt compile
+          exit 0
         env:
           DBT_GCP_PROJECT: ${{ secrets.DBT_GCP_PROJECT }}
 
