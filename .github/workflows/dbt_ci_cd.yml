@@ -72,6 +72,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install sqlfluff>=3.0.0
+          pip install sqlfluff-templater-dbt
           pip install dbt-core==${{ env.DBT_VERSION }}
           pip install dbt-bigquery==${{ env.DBT_VERSION }}
 

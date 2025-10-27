@@ -60,6 +60,7 @@ install-deps: ## Instalar dependencias de Python
 	@$(PIP) install dbt-core==1.7.9
 	@$(PIP) install dbt-bigquery==1.7.9
 	@$(PIP) install "sqlfluff>=3.0.0"
+	@$(PIP) install sqlfluff-templater-dbt
 	@cd $(DATA_LOADING_DIR) && $(PIP) install -r requirements.txt
 	@echo "✅ Dependencias instaladas"
 
