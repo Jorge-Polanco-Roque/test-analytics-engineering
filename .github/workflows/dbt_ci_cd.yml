@@ -41,7 +41,6 @@ on:
 
 # Variables de entorno globales
 env:
-  DBT_PROFILES_DIR: ${{ github.workspace }}/dbt_project
   PYTHON_VERSION: '3.11'
   DBT_VERSION: '1.7.9'
 
